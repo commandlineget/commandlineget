@@ -1,0 +1,181 @@
+/*
+ * V: 0.0.2 - 10/12/2017
+*/
+
+var programOption = 'curl';
+var fileOption = 'auto';
+var filenameOption = 'download.fil';
+var ratelimitOption = '0';
+var verboseOption = false;
+var resumeOption = true;
+var headers = '';
+var curlUserOption = '';
+var wgetUserOption = '';
+
+//Right click context adds for links + audio/video
+browser.contextMenus.create({
+    id: "copy-link-to-clipboard",
+    title: "Create web link for Download",
+    contexts: ["link"]
+});
+browser.contextMenus.create({
+    id: "copy-media-to-clipboard",
+    title: "Create media link for Download",
+    contexts: ['video', 'audio']
+});
+
+//basic promisified xmlhttpreq, will be stopped at building the request
+let ajaxGet = (obj) => {
+    return new Promise((resolve, reject) => {
+        let xhr = new XMLHttpRequest();
+        xhr.open(obj.method || "GET", obj.url);
+        if (obj.headers) {
+            Object.keys(obj.headers).forEach(key => {
+                xhr.setRequestHeader(key, obj.headers[key]);
+            });
+        }
+        xhr.send(obj.body);
+        resolve(true);
+    });
+};
+
+// callback for onBeforeSendHeaders listener.
+// Returns a promise and adds cancel request to the xmlhttpreq
+let getHeaders = (e) => {
+    headers = ''
+    for (let header of e.requestHeaders) {
+        headers += " --header '" + header.name + ": " + header.value + "'";
+    }
+    //console.log(headers);
+    var asyncCancel = new Promise((resolve, reject) => {
+        resolve({cancel: true});
+    });
+    
+    return asyncCancel;
+};
+
+// main command builder function
+function assembleCmd(url, referUrl) {
+    let curlText = "curl";  // curl command holder
+        let wgetText = "wget";  // wget command holder
+        if (verboseOption) { curlText += " -v"; wgetText += " -v"; }
+        if (resumeOption) { curlText += " -C -"; wgetText += " -c"; }
+        if (ratelimitOption.replace(/\s/g,'')) { 
+            curlText += " --limit-rate " + ratelimitOption; 
+            wgetText += " --limit-rate " + ratelimitOption;
+        }
+        
+        // ######################################################################
+        // use remote suggested filename, how safe is this?  also only available in moderately up to date 
+        // ## replacement for -O -J, same security issues though, make optional 
+        // ## this version will accept filename or location header
+        // curl -s -D - "$url" -o /dev/null | grep -i "filename\|Location" | (IFS= read -r spo; sec=$(echo ${spo//*\//filename=}); echo ${sec#*filename=});
+        // ######################################################################
+        
+        if (fileOption === 'auto') { curlText += " -O -J"; wgetText += " --content-disposition"; }
+        else { 
+            try {
+                if (!filenameOption.replace(/\s/g,'')) { throw "err: empty or whitespace filename: " + filenameOption }
+            }
+            catch (e) {
+                console.log(e);
+                filenameOption = 'download.fil';
+            }
+            curlText += " -o " + filenameOption;
+            wgetText += " -O " + filenameOption;
+        }
+            
+        curlText += 
+            " -L" + headers +
+            // auto generated headers don't appear to include this, leaving here for now
+            " --header 'Referer: " + referUrl + "'";
+        try {
+            if (curlUserOption.replace(/\s/g,'')) { curlText += " " + curlUserOption; }    
+        }
+        catch (e) {
+            //ignore empty user option text inputs
+        }
+        curlText +=
+            " '" + url + "'" +
+            " -w '\\nFile saved as: %{filename_effective}\\n'";
+            
+        
+        wgetText += headers;
+        try {
+            if (wgetUserOption.replace(/\s/g,'')) { wgetText += " " + wgetUserOption; }    
+        }
+        catch (e) {
+            //ignore empty user option text inputs
+        }
+        wgetText += " '" + url + "'";
+        
+        const curlCode = "copyToClipboard(" + JSON.stringify(curlText) + ",);";
+        const wgetCode = "copyToClipboard(" + JSON.stringify(wgetText) + ",);";
+        
+        return (programOption === "curl") ? curlCode : wgetCode;
+};
+
+function copyCommand(code, tab)  {
+browser.tabs.executeScript({
+    code: "typeof copyToClipboard === 'function';",
+    }).then((results) => {
+            // The content script's last expression will be true if the function
+            // has been defined. If this is not the case, then we need to run
+            // clipboard-helper.js to define function copyToClipboard.
+            if (!results || results[0] !== true) {
+                return browser.tabs.executeScript(tab.id, {
+                    file: "clipboard-helper.js",
+                });
+            }
+    }).then(() => {
+            return browser.tabs.executeScript(tab.id, {
+                code,
+            });
+    }).catch((error) => {
+            // This could happen if the extension is not allowed to run code in
+            // the page, for example if the tab is a privileged page.
+            console.error("Failed : " + error);
+    });
+};
+
+browser.contextMenus.onClicked.addListener((info, tab) => {
+
+    let url = (info.menuItemId === 'copy-media-to-clipboard') ? info.srcUrl : info.linkUrl
+    let referUrl = info.pageUrl;
+    
+    // add onbeforesendheaders listener for clicked url
+    browser.webRequest.onBeforeSendHeaders.addListener(
+        getHeaders, {urls: [url]}, ["blocking","requestHeaders"]);
+    
+    // workaround for xmlhttpget firing before addlistener is complete    
+    let gettingHtml = new Promise (function(resolve,reject) {
+        setTimeout(function(){ 
+                resolve(ajaxGet({url: url}));
+                }, 1);
+    });
+    
+    // check the saved options each click in case they changed
+    let gettingOptions = browser.storage.sync.get(
+        ['prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser'])
+        .then((res) => {
+            programOption = res.prog;
+            fileOption = res.file;
+            filenameOption = res.filename;
+            ratelimitOption = res.ratelimit;
+            verboseOption = res.verbose;
+            resumeOption = res.resume;
+            curlUserOption = res.curlUser;
+            wgetUserOption = res.wgetUser;
+        });
+    
+    // loop all requesite async functions into promise.all
+    Promise.all([gettingOptions,gettingHtml]).then(() => { 
+        let code = assembleCmd(url, referUrl);
+        copyCommand(code,tab);
+        
+        browser.webRequest.onBeforeSendHeaders.removeListener(getHeaders);
+        //console.log("status onbefore: " + browser.webRequest.onBeforeSendHeaders.hasListener(getHeaders));
+    });
+    
+});
+

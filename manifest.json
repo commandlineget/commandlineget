@@ -1,0 +1,34 @@
+{
+    "manifest_version": 2,
+    "name": "Command Line Get (CLG)",
+    "description": "Adds a context menu option to generate download commands to any link for wget / curl.",
+    "version": "0.0.2",
+    "homepage_url": "https://github.com/mdn/command-line-get",
+
+    "background": {
+        "scripts": [
+            "background.js"
+        ]
+    },
+    
+    "options_ui": {
+    "page": "options.html"
+  },
+
+    "permissions": [
+        "activeTab",
+        "contextMenus",
+        "clipboardWrite",
+        "cookies",
+        "<all_urls>",
+        "storage",
+        "webRequest",
+        "webRequestBlocking"
+    ],
+    "applications": {
+        "gecko": {
+            "id": "mycliget@example.com",
+            "strict_min_version": "53.0"
+        }
+    }
+}
