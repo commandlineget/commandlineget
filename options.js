@@ -10,22 +10,32 @@ function saveOptions(e) {
     wgetUser: document.querySelector('input[name=wgetUser]').value,
     curlUser: document.querySelector('input[name=curlUser]').value
   });
-  e.preventDefault();
+    if (typeof(e) !== "undefined") {
+        e.preventDefault();
+    }
+
 }
 
 function restoreOptions() {
   var gettingItem = browser.storage.sync.get(
     ['quotes', 'prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser']);
   gettingItem.then((res) => {
-    document.querySelector('input[name=quotes]').checked = res.quotes ? res.quotes : false;
-    document.querySelector('input[name=prog][value=' + res.prog + ']').checked = true;
-    document.querySelector('input[name=file][value=' + res.file + ']').checked = true;
-    document.querySelector('input[name=filename]').value = res.filename ? res.filename : '';
-    document.querySelector('input[name=ratelimit]').value = res.ratelimit ? res.ratelimit : '';
-    document.querySelector('input[name=verbose]').checked = res.verbose ? res.verbose : false;
-    document.querySelector('input[name=resume]').checked = res.resume ? res.resume : true;
-    document.querySelector('input[name=wgetUser]').value = res.wgetUser ? res.wgetUser : '';
-    document.querySelector('input[name=curlUser]').value = res.curlUser ? res.curlUser : '';
+    
+    if (Object.keys(res).length > 0 && res.constructor === Object) {
+        document.querySelector('input[name=quotes]').checked = res.quotes ? res.quotes : false;
+        document.querySelector('input[name=prog][value=' + res.prog + ']').checked = true;
+        document.querySelector('input[name=file][value=' + res.file + ']').checked = true;
+        document.querySelector('input[name=filename]').value = res.filename ? res.filename : '';
+        document.querySelector('input[name=ratelimit]').value = res.ratelimit ? res.ratelimit : '';
+        document.querySelector('input[name=verbose]').checked = res.verbose ? res.verbose : false;
+        document.querySelector('input[name=resume]').checked = res.resume ? res.resume : true;
+        document.querySelector('input[name=wgetUser]').value = res.wgetUser ? res.wgetUser : '';
+        document.querySelector('input[name=curlUser]').value = res.curlUser ? res.curlUser : '';
+    }
+    // if no saved info save the defaults to initialize
+    else {
+        saveOptions();
+    }
   });
 }
 

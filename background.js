@@ -1,11 +1,11 @@
 /*
- * V: 0.0.3 - 10/13/2017
+ * V: 0.0.4 - 10/13/2017
 */
 var quotesOption = false;
 var programOption = 'curl';
 var fileOption = 'auto';
 var filenameOption = 'download.fil';
-var ratelimitOption = '0';
+var ratelimitOption = '';
 var verboseOption = false;
 var resumeOption = true;
 var headers = '';
@@ -57,67 +57,72 @@ let getHeaders = (e) => {
 // main command builder function
 function assembleCmd(url, referUrl) {
     let curlText = "curl";  // curl command holder
-        let wgetText = "wget";  // wget command holder
-        if (verboseOption) { curlText += " -v"; wgetText += " -v"; }
-        if (resumeOption) { curlText += " -C -"; wgetText += " -c"; }
+    let wgetText = "wget";  // wget command holder
+    if (verboseOption) { curlText += " -v"; wgetText += " -v"; }
+    if (resumeOption) { curlText += " -C -"; wgetText += " -c"; }
+    try {
         if (ratelimitOption.replace(/\s/g,'')) { 
             curlText += " --limit-rate " + ratelimitOption; 
             wgetText += " --limit-rate " + ratelimitOption;
         }
-        
-        // ######################################################################
-        // use remote suggested filename, how safe is this?  also only available in moderately up to date 
-        // ## replacement for -O -J, same security issues though, make optional 
-        // ## this version will accept filename or location header
-        // curl -s -D - "$url" -o /dev/null | grep -i "filename\|Location" | (IFS= read -r spo; sec=$(echo ${spo//*\//filename=}); echo ${sec#*filename=});
-        // ######################################################################
-        
-        if (fileOption === 'auto') { curlText += " -O -J"; wgetText += " --content-disposition"; }
-        else { 
-            try {
-                if (!filenameOption.replace(/\s/g,'')) { throw "err: empty or whitespace filename: " + filenameOption }
-            }
-            catch (e) {
-                console.log(e);
-                filenameOption = 'download.fil';
-            }
-            curlText += " -o " + filenameOption;
-            wgetText += " -O " + filenameOption;
-        }
-            
-        curlText += 
-            " -L" + headers +
-            // auto generated headers don't appear to include this, leaving here for now
-            " --header 'Referer: " + referUrl + "'";
+    }
+    catch (e) {
+        //console.log("ratelimitOption: " + e);
+        // ratelimit not set
+    }
+    // ######################################################################
+    // use remote suggested filename, how safe is this?  also only available in moderately up to date 
+    // ## replacement for -O -J, same security issues though, make optional 
+    // ## this version will accept filename or location header
+    // curl -s -D - "$url" -o /dev/null | grep -i "filename\|Location" | (IFS= read -r spo; sec=$(echo ${spo//*\//filename=}); echo ${sec#*filename=});
+    // ######################################################################
+    
+    if (fileOption === 'auto') { curlText += " -O -J"; wgetText += " --content-disposition"; }
+    else { 
         try {
-            if (curlUserOption.replace(/\s/g,'')) { curlText += " " + curlUserOption; }    
+            if (!filenameOption.replace(/\s/g,'')) { throw "err: empty or whitespace filename: " + filenameOption }
         }
         catch (e) {
-            //ignore empty user option text inputs
+            //console.log("filenameOption: " + e);
+            filenameOption = 'download.fil';
         }
-        curlText +=
-            " '" + url + "'" +
-            " -w '\\nFile saved as: %{filename_effective}\\n'";
-            
+        curlText += " -o " + filenameOption;
+        wgetText += " -O " + filenameOption;
+    }
         
-        wgetText += headers;
-        try {
-            if (wgetUserOption.replace(/\s/g,'')) { wgetText += " " + wgetUserOption; }    
-        }
-        catch (e) {
-            //ignore empty user option text inputs
-        }
-        wgetText += " '" + url + "'";
+    curlText += 
+        " -L" + headers +
+        // auto generated headers don't appear to include this, leaving here for now
+        " --header 'Referer: " + referUrl + "'";
+    try {
+        if (curlUserOption.replace(/\s/g,'')) { curlText += " " + curlUserOption; }    
+    }
+    catch (e) {
+        //ignore empty user option text inputs
+    }
+    curlText +=
+        " '" + url + "'" +
+        " -w '\\nFile saved as: %{filename_effective}\\n'";
         
-        if (quotesOption) {
-            curlText = curlText.replace(/'/g,'"');
-            wgetText = wgetText.replace(/'/g,'"');
-        }
-        
-        const curlCode = "copyToClipboard(" + JSON.stringify(curlText) + ",);";
-        const wgetCode = "copyToClipboard(" + JSON.stringify(wgetText) + ",);";
-        
-        return (programOption === "curl") ? curlCode : wgetCode;
+    
+    wgetText += headers;
+    try {
+        if (wgetUserOption.replace(/\s/g,'')) { wgetText += " " + wgetUserOption; }    
+    }
+    catch (e) {
+        //ignore empty user option text inputs
+    }
+    wgetText += " '" + url + "'";
+    
+    if (quotesOption) {
+        curlText = curlText.replace(/'/g,'"');
+        wgetText = wgetText.replace(/'/g,'"');
+    }
+    
+    const curlCode = "copyToClipboard(" + JSON.stringify(curlText) + ",);";
+    const wgetCode = "copyToClipboard(" + JSON.stringify(wgetText) + ",);";
+    
+    return (programOption === "curl") ? curlCode : wgetCode;
 };
 
 function copyCommand(code, tab)  {

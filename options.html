@@ -6,14 +6,14 @@
   </head>
 
 <body>
-    <form>
+    <form id='optionsForm'>
         Use double quotes instead of single (windows users use this): 
         <input type="checkbox" name="quotes" id="quotes"><br>
         Generate command for:
         <input type="radio" name="prog" id="prog" value="curl" checked="checked"> Curl
         <input type="radio" name="prog" id="prog" value="wget"> Wget <br>
         <label>Filename to use: </label>
-        <input type="radio" name="file" id="file" value="auto" hecked="checked"> Auto from url
+        <input type="radio" name="file" id="file" value="auto" checked="checked"> Auto from url
         <input type="radio" name="file" id="file" value="manual"> Manual<br>
         FileName: <input type="text" name="filename" id="filename" ><br><br>
         Download Rate Limit(k,m,g as suffix): <input type="text" name="ratelimit" id="ratelimit" value='0'><br><br>
