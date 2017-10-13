@@ -1,7 +1,7 @@
 /*
- * V: 0.0.2 - 10/12/2017
+ * V: 0.0.3 - 10/13/2017
 */
-
+var quotesOption = false;
 var programOption = 'curl';
 var fileOption = 'auto';
 var filenameOption = 'download.fil';
@@ -109,6 +109,11 @@ function assembleCmd(url, referUrl) {
         }
         wgetText += " '" + url + "'";
         
+        if (quotesOption) {
+            curlText = curlText.replace(/'/g,'"');
+            wgetText = wgetText.replace(/'/g,'"');
+        }
+        
         const curlCode = "copyToClipboard(" + JSON.stringify(curlText) + ",);";
         const wgetCode = "copyToClipboard(" + JSON.stringify(wgetText) + ",);";
         
@@ -156,8 +161,9 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
     
     // check the saved options each click in case they changed
     let gettingOptions = browser.storage.sync.get(
-        ['prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser'])
+        ['quotes','prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser'])
         .then((res) => {
+            quotesOption = res.quotes;
             programOption = res.prog;
             fileOption = res.file;
             filenameOption = res.filename;

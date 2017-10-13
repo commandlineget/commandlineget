@@ -1,5 +1,6 @@
 function saveOptions(e) {
   browser.storage.sync.set({
+    quotes: document.querySelector('input[name=quotes]').checked,
     prog: document.querySelector('input[name=prog]:checked').value,
     file: document.querySelector('input[name=file]:checked').value,
     filename: document.querySelector('input[name=filename]').value,
@@ -14,9 +15,9 @@ function saveOptions(e) {
 
 function restoreOptions() {
   var gettingItem = browser.storage.sync.get(
-    ['prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser']);
+    ['quotes', 'prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser']);
   gettingItem.then((res) => {
-    
+    document.querySelector('input[name=quotes]').checked = res.quotes ? res.quotes : false;
     document.querySelector('input[name=prog][value=' + res.prog + ']').checked = true;
     document.querySelector('input[name=file][value=' + res.file + ']').checked = true;
     document.querySelector('input[name=filename]').value = res.filename ? res.filename : '';
