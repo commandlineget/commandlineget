@@ -1,6 +1,13 @@
 /*
- * V: 0.0.4 - 10/13/2017
+ * V: 0.0.5 - 12/11/2017
 */
+
+/*
+ * clipboard function originated with mozilla webextension examples here:
+ * https://github.com/mdn/webextensions-examples
+ */
+ 
+ 
 var quotesOption = false;
 var programOption = 'curl';
 var fileOption = 'auto';
@@ -11,6 +18,7 @@ var resumeOption = true;
 var headers = '';
 var curlUserOption = '';
 var wgetUserOption = '';
+var snackbarOption = false;
 
 //Right click context adds for links + audio/video
 browser.contextMenus.create({
@@ -119,8 +127,8 @@ function assembleCmd(url, referUrl) {
         wgetText = wgetText.replace(/'/g,'"');
     }
     
-    const curlCode = "copyToClipboard(" + JSON.stringify(curlText) + ",);";
-    const wgetCode = "copyToClipboard(" + JSON.stringify(wgetText) + ",);";
+    const curlCode = "copyToClipboard(" + JSON.stringify(curlText) + ", " + snackbarOption + ");";
+    const wgetCode = "copyToClipboard(" + JSON.stringify(wgetText) + ", " + snackbarOption + ");";
     
     return (programOption === "curl") ? curlCode : wgetCode;
 };
@@ -166,7 +174,7 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
     
     // check the saved options each click in case they changed
     let gettingOptions = browser.storage.sync.get(
-        ['quotes','prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser'])
+        ['quotes','prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser','snackbar'])
         .then((res) => {
             quotesOption = res.quotes;
             programOption = res.prog;
@@ -177,6 +185,7 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
             resumeOption = res.resume;
             curlUserOption = res.curlUser;
             wgetUserOption = res.wgetUser;
+            snackbarOption = res.snackbar;
         });
     
     // loop all requesite async functions into promise.all
