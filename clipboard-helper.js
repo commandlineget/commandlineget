@@ -17,7 +17,7 @@ function copyToClipboard(text, show) {
                 // push snackbar style into document
                 var style = document.createElement('style');
                 style.type = 'text/css';
-                style.innerHTML = '.clg-snackbar { min-width: 200px; background-color: #333; \
+                style.innerHTML = '.clg-snackbar { visibility: visible; min-width: 200px; background-color: #333; \
                 border-style:solid; border-color: black; animation: fadeinout 3s ease-out forwards; \
                 color: #fff; text-align: center; border-radius: 2px; padding: 16px; position: fixed; \
                 z-index: 10000; left: 50%; bottom: 30px; } \
@@ -30,12 +30,16 @@ function copyToClipboard(text, show) {
                 document.body.innerHTML += "<div class='clg-snackbar' id='addon-clg-snackbar'>Selected item added to copy buffer</div>";
             }
             else {
+                mydiv.style.visibility = 'visible';
                 // if bar exists, toggle classname to fire animation with minimal delay between states
                 mydiv.className = ''; 
                 setTimeout(function() {mydiv.className = 'clg-snackbar';}, 10);
+                //hide div after fadeout so any underlying html is accessible
+                setTimeout(function() {mydiv.style.visibility = 'hidden'; }, 3200);
             }
                 
         }
+        
         
         
     }
