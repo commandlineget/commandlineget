@@ -16,6 +16,7 @@ var ratelimitOption = '';
 var verboseOption = false;
 var resumeOption = true;
 var headers = '';
+var ariaheaders = '';
 var curlUserOption = '';
 var wgetUserOption = '';
 var snackbarOption = false;
@@ -50,9 +51,11 @@ let ajaxGet = (obj) => {
 // callback for onBeforeSendHeaders listener.
 // Returns a promise and adds cancel request to the xmlhttpreq
 let getHeaders = (e) => {
-    headers = ''
+    headers = '';
+    ariaheaders = '';
     for (let header of e.requestHeaders) {
         headers += " --header '" + header.name + ": " + header.value + "'";
+        ariaheaders += " --header='" + header.name + ": " + header.value + "'";
     }
     //console.log(headers);
     var asyncCancel = new Promise((resolve, reject) => {
@@ -66,12 +69,14 @@ let getHeaders = (e) => {
 function assembleCmd(url, referUrl) {
     let curlText = "curl";  // curl command holder
     let wgetText = "wget";  // wget command holder
-    if (verboseOption) { curlText += " -v"; wgetText += " -v"; }
-    if (resumeOption) { curlText += " -C -"; wgetText += " -c"; }
+    let ariaText = "aria2c"; // aria2 command holder
+    if (verboseOption) { curlText += " -v"; wgetText += " -v"; ariaText += " --console-log-level=debug"; }
+    if (resumeOption) { curlText += " -C -"; wgetText += " -c"; ariaText += " -c"; }
     try {
         if (ratelimitOption.replace(/\s/g,'')) { 
             curlText += " --limit-rate " + ratelimitOption; 
             wgetText += " --limit-rate " + ratelimitOption;
+            ariaText += " --max-overall-download-limit=" + ratelimitOption;
         }
     }
     catch (e) {
@@ -96,6 +101,7 @@ function assembleCmd(url, referUrl) {
         }
         curlText += " -o " + filenameOption;
         wgetText += " -O " + filenameOption;
+        ariaText += " -o " + filenameOption;
     }
         
     curlText += 
@@ -122,15 +128,39 @@ function assembleCmd(url, referUrl) {
     }
     wgetText += " '" + url + "'";
     
+    ariaText += ariaheaders;
+    try {
+        if (ariaUserOption.replace(/\s/g,'')) { ariaText += " " + ariaUserOption; }    
+    }
+    catch (e) {
+        //ignore empty user option text inputs
+    }
+    ariaText += " '" + url + "'";
+    
+    
+    
     if (quotesOption) {
         curlText = curlText.replace(/'/g,'"');
         wgetText = wgetText.replace(/'/g,'"');
+        ariaText = wgetText.replace(/'/g,'"');
     }
     
     const curlCode = "copyToClipboard(" + JSON.stringify(curlText) + ", " + snackbarOption + ");";
     const wgetCode = "copyToClipboard(" + JSON.stringify(wgetText) + ", " + snackbarOption + ");";
+    const ariaCode = "copyToClipboard(" + JSON.stringify(ariaText) + ", " + snackbarOption + ");";
     
-    return (programOption === "curl") ? curlCode : wgetCode;
+    switch (programOption) {
+        case "curl":
+            return (curlCode);
+            break;
+        case "wget":
+            return (wgetCode);
+            break;
+        case "aria":
+            return (ariaCode);
+            break;
+    }
+    //return (programOption === "curl") ? curlCode : wgetCode;
 };
 
 function copyCommand(code, tab)  {
@@ -174,7 +204,7 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
     
     // check the saved options each click in case they changed
     let gettingOptions = browser.storage.sync.get(
-        ['quotes','prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser','snackbar'])
+        ['quotes','prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser', 'ariaUser', 'snackbar'])
         .then((res) => {
             quotesOption = res.quotes;
             programOption = res.prog;
@@ -185,6 +215,7 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
             resumeOption = res.resume;
             curlUserOption = res.curlUser;
             wgetUserOption = res.wgetUser;
+            ariaUserOption = res.ariaUser;
             snackbarOption = res.snackbar;
         });
     

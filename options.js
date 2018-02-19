@@ -9,6 +9,7 @@ function saveOptions(e) {
     resume: document.querySelector('input[name=resume]').checked,
     wgetUser: document.querySelector('input[name=wgetUser]').value,
     curlUser: document.querySelector('input[name=curlUser]').value,
+    ariaUser: document.querySelector('input[name=ariaUser]').value,
     snackbar: document.querySelector('input[name=snackbar]').checked,
     
   });
@@ -20,7 +21,7 @@ function saveOptions(e) {
 
 function restoreOptions() {
   var gettingItem = browser.storage.sync.get(
-    ['quotes', 'prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser','snackbar']);
+    ['quotes', 'prog','file','filename','ratelimit','verbose','resume','wgetUser','curlUser','ariaUser','snackbar']);
   gettingItem.then((res) => {
     
     if (Object.keys(res).length > 0 && res.constructor === Object) {
@@ -33,6 +34,7 @@ function restoreOptions() {
         document.querySelector('input[name=resume]').checked = res.resume ? res.resume : true;
         document.querySelector('input[name=wgetUser]').value = res.wgetUser ? res.wgetUser : '';
         document.querySelector('input[name=curlUser]').value = res.curlUser ? res.curlUser : '';
+        document.querySelector('input[name=ariaUser]').value = res.ariaUser ? res.ariaUser : '';
         document.querySelector('input[name=snackbar]').checked = res.snackbar ? res.snackbar : false;
     }
     // if no saved info save the defaults to initialize
