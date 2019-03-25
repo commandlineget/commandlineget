@@ -1,5 +1,5 @@
 /*
- * V: 0.0.8 - 3/17/2018
+ * V: 0.0.9 - 3/25/2019
 */
 
 /*
@@ -20,6 +20,8 @@ var ariaheaders = '';
 var curlUserOption = '';
 var wgetUserOption = '';
 var snackbarOption = false;
+var trigger;
+
 
 //Right click context adds for links + audio/video
 browser.contextMenus.create({
@@ -37,19 +39,22 @@ browser.contextMenus.create({
 let ajaxGet = (obj) => {
     return new Promise((resolve, reject) => {
         let xhr = new XMLHttpRequest();
+        //5s timeout on request, should never fire
+        xhr.timeout = 5000;
         xhr.open(obj.method || "GET", obj.url);
         if (obj.headers) {
             Object.keys(obj.headers).forEach(key => {
                 xhr.setRequestHeader(key, obj.headers[key]);
             });
         }
-        xhr.send(obj.body);
+        xhr.send(obj.body || '');
         resolve(true);
     });
 };
 
 // callback for onBeforeSendHeaders listener.
 // Returns a promise and adds cancel request to the xmlhttpreq
+// trigger now looped into main promise.all
 let getHeaders = (e) => {
     headers = '';
     ariaheaders = '';
@@ -57,11 +62,13 @@ let getHeaders = (e) => {
         headers += " --header '" + header.name + ": " + header.value + "'";
         ariaheaders += " --header='" + header.name + ": " + header.value + "'";
     }
-    //console.log(headers);
+    //console.log('headers: ' + headers.toString());
+    
+
     var asyncCancel = new Promise((resolve, reject) => {
         resolve({cancel: true});
     });
-    
+    trigger(true);
     return asyncCancel;
 };
 
@@ -80,7 +87,6 @@ function assembleCmd(url, referUrl) {
         }
     }
     catch (e) {
-        //console.log("ratelimitOption: " + e);
         // ratelimit not set
     }
     // ######################################################################
@@ -187,13 +193,24 @@ browser.tabs.executeScript({
 };
 
 browser.contextMenus.onClicked.addListener((info, tab) => {
-
+    
     let url = (info.menuItemId === 'copy-media-to-clipboard') ? info.srcUrl : info.linkUrl
     let referUrl = info.pageUrl;
+    let cleanedUrl = '';
+    
+    let gettingHeaders = new Promise(function(resolve, reject) {trigger = resolve;});
+    
+    // basic port num strip for certain urls
+    // TODO more robust sanitize of url for match pattern
+    if (RegExp('//').test(url)) {
+        let temp = url.split('/');
+        temp[2] = temp[2].replace(/:[0-9]+/, '');
+        cleanedUrl = temp.join('/');
+    }
     
     // add onbeforesendheaders listener for clicked url
     browser.webRequest.onBeforeSendHeaders.addListener(
-        getHeaders, {urls: [url]}, ["blocking","requestHeaders"]);
+        getHeaders, {urls: [cleanedUrl]}, ["blocking","requestHeaders"]);
     
     // workaround for xmlhttpget firing before addlistener is complete    
     let gettingHtml = new Promise (function(resolve,reject) {
@@ -218,15 +235,28 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
             ariaUserOption = res.ariaUser;
             snackbarOption = res.snackbar;
         });
+    let promiseCancel = new Promise(function(resolve,reject) {
+        setTimeout(function() {
+                reject(false);
+        },2000);
+    });
+
+    // 2s timeout if somehow the request was not caught on the 
+    // header generation.
+    let cancelled = Promise.race([promiseCancel, gettingHeaders]);
     
     // loop all requesite async functions into promise.all
-    Promise.all([gettingOptions,gettingHtml]).then(() => { 
+    Promise.all([gettingOptions,gettingHtml,cancelled]).then(() => { 
         let code = assembleCmd(url, referUrl);
         copyCommand(code,tab);
         
         browser.webRequest.onBeforeSendHeaders.removeListener(getHeaders);
-        //console.log("status onbefore: " + browser.webRequest.onBeforeSendHeaders.hasListener(getHeaders));
+    },
+    () => {
+        // reset listener on reject
+        browser.webRequest.onBeforeSendHeaders.removeListener(getHeaders);
     });
+    
     
 });
 

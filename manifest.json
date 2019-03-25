@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
     "name": "Command Line Get (CLG)",
-    "description": "Adds a context menu option to generate download commands to any link for wget / curl.",
-    "version": "0.0.7",
+    "description": "Adds a context menu option to generate download commands to any link for wget / curl / aria.",
+    "version": "0.0.9",
     "homepage_url": "https://github.com/commandlineget/commandlineget",
 
     "background": {
